@@ -1,0 +1,25 @@
+name: My Composite Action
+
+description: A composite action that ...
+
+inputs:
+  my-input:
+    description: This is my input, there is no other input like it.
+    required: false
+    default: The default description.
+
+outputs:
+  my-output:
+    description: The output this composite action produces.
+    value: steps.workflow-step.outputs.my-output
+
+runs:
+  using: composite
+  steps:
+    - name: Workflow Step
+      id: workflow-step
+      run: |-
+        printf 'my-output=%s\n' "${MY_INPUT}" >> "${GITHUB_OUTPUT}"
+      shell: sh
+      env:
+        MY_INPUT: inputs.my-input
