@@ -45,28 +45,31 @@ case "${file}" in
     trap 'rm -f "${tmp}"' EXIT INT TERM HUP
 
     # The key is dynamic, so it is passed via -v; keys in scope are [A-Za-z0-9_-]
-    # and carry no regex metacharacters. The version pattern is constant, so it
-    # stays a /regex/ literal to avoid -v string-escape surprises.
+    # and carry no regex metacharacters. The value is taken as the assignment's
+    # third field, so the caller must only target lines whose value is a version.
     status=0
     awk -v key="${key}" -v version="${version}" '
-      BEGIN { keyre = "^[[:space:]]*" key "([[:space:]]|:|=)" }  # Key begins the value-bearing line.
-      !found && $0 ~ keyre {
+      BEGIN {
+        assignment_operator = "[[:space:]]*:?="  # Optional spaces, := or =
+        key_line_pattern = "^" key assignment_operator
+      }
+      !found && $0 ~ key_line_pattern {
         found = 1
-        output = $0
-        if (sub(/v?[0-9]+\.[0-9]+\.[0-9]+/, version, output) == 0) {
-          no_version = 1                                         # Key line carried no version token.
-          print
-          next
+        current = $3
+        if (current != version) {
+          # Splice over "current in place" so
+          # surrounding alignment survives.
+          at = index($0, current)
+          $0 = substr($0, 1, at - 1) version substr($0, at + length(current))
+          changed = 1
         }
-        if (output != $0) changed = 1                           # Replacement differed: a real bump.
-        print output
+        print
         next
       }
-      { print }                                                 # Passthrough for every other line.
+      { print }
       END {
-        if (!found)     exit 2                                  # Key not found.
-        if (no_version) exit 4                                  # Key found, but no version on its line.
-        exit changed ? 0 : 3                                    # 0 = changed, 3 = already current.
+        if (!found) exit 2    # Key not found.
+        exit changed ? 0 : 3  # 0 = changed, 3 = already current.
       }
     ' "${file}" >"${tmp}" || status=$?
 
@@ -77,7 +80,6 @@ case "${file}" in
         ;;
       3) : ;; # Key found, already at version: nothing to do.
       2) die "key not found: ${key}" ;;
-      4) die "no version token on line for key: ${key}" ;;
       *) die "awk failed with status ${status}" ;;
     esac
     ;;
