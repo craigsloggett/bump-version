@@ -30,9 +30,13 @@ case "${file}" in
     command -v yq >/dev/null 2>&1 || die "yq not found"
 
     # yq targets the path exactly, so no version-pattern inference is needed. A
-    # missing path yields "null", which is not a realistic version value.
+    # missing simple path yields "null"; a path that traverses [] past a
+    # non-matching node yields empty. Neither is a realistic version, so treat
+    # both as no match and fail rather than write nothing and report success.
     current="$(yq "${key}" "${file}")"
-    [ "${current}" != "null" ] || die "yq path matched nothing: ${key}"
+    if [ -z "${current}" ] || [ "${current}" = "null" ]; then
+      die "yq path matched nothing: ${key}"
+    fi
 
     # Narrow the path to its final key for a readable log line.
     label="$(yq "(${key}) | key" "${file}")"
