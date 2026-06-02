@@ -1,10 +1,31 @@
 name: Bump Version
 
-description: Bumps a version.
+description: Rewrites a pinned version string in a file, by yq path for YAML or by keyed line otherwise.
+
+inputs:
+  file:
+    description: Path to the file to edit.
+    required: true
+  key:
+    description: A yq path expression for YAML files, or the token that begins the version line otherwise.
+    required: true
+  version:
+    description: The new version string to write.
+    required: true
+
+outputs:
+  changed:
+    description: Whether the file was modified. `false` if it already held the version.
+    value: ${{ steps.bump.outputs.changed }}
 
 runs:
   using: composite
   steps:
     - name: Bump Version
-      run: ':'
+      id: bump
+      run: ${{ github.action_path }}/src/bump-version.sh
       shell: sh
+      env:
+        INPUT_FILE: ${{ inputs.file }}
+        INPUT_KEY: ${{ inputs.key }}
+        INPUT_VERSION: ${{ inputs.version }}
