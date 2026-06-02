@@ -14,6 +14,10 @@ file="${INPUT_FILE:?file input is required}"
 key="${INPUT_KEY:?key input is required}"
 version="${INPUT_VERSION:?version input is required}"
 
+# Label for the log. A bare token key is already readable; a yq path is not, so
+# the YAML branch narrows it to the final key below.
+label="${key}"
+
 command -v awk >/dev/null 2>&1 || die "awk not found"
 
 [ -f "${file}" ] || die "file not found: ${file}"
@@ -29,6 +33,9 @@ case "${file}" in
     # missing path yields "null", which is not a realistic version value.
     current="$(yq "${key}" "${file}")"
     [ "${current}" != "null" ] || die "yq path matched nothing: ${key}"
+
+    # Narrow the path to its final key for a readable log line.
+    label="$(yq "(${key}) | key" "${file}")"
 
     if [ "${current}" != "${version}" ]; then
       # Pass the value via the environment so it is treated as a string and
@@ -85,9 +92,9 @@ case "${file}" in
 esac
 
 if [ "${changed}" = true ]; then
-  printf 'updated %s to %s in %s\n' "${key}" "${version}" "${file}"
+  printf 'updated %s to %s in %s\n' "${label}" "${version}" "${file}"
 else
-  printf '%s already at %s in %s\n' "${key}" "${version}" "${file}"
+  printf '%s already at %s in %s\n' "${label}" "${version}" "${file}"
 fi
 
 [ -n "${GITHUB_OUTPUT:-}" ] && printf 'changed=%s\n' "${changed}" >>"${GITHUB_OUTPUT}"
