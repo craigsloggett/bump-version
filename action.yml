@@ -23,7 +23,7 @@ runs:
   steps:
     - name: Bump Version
       id: bump
-      run: ${{ github.action_path }}/src/bump-version.sh
+      run: ${{ github.action_path }}/src/bump_version.sh
       shell: sh
       env:
         INPUT_FILE: ${{ inputs.file }}
