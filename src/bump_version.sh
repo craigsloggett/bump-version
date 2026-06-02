@@ -84,6 +84,12 @@ case "${file}" in
     ;;
 esac
 
+if [ "${changed}" = true ]; then
+  printf 'updated %s to %s in %s\n' "${key}" "${version}" "${file}"
+else
+  printf '%s already at %s in %s\n' "${key}" "${version}" "${file}"
+fi
+
 [ -n "${GITHUB_OUTPUT:-}" ] && printf 'changed=%s\n' "${changed}" >>"${GITHUB_OUTPUT}"
 
 exit 0
