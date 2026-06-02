@@ -50,15 +50,14 @@ case "${file}" in
     status=0
     awk -v key="${key}" -v version="${version}" '
       BEGIN {
-        assignment_operator = "[[:space:]]*:?="  # Optional spaces, := or =
+        assignment_operator = "[[:space:]]*:?="        # Optional spaces, := or =
         key_line_pattern = "^" key assignment_operator
       }
       !found && $0 ~ key_line_pattern {
         found = 1
         current = $3
         if (current != version) {
-          # Splice over "current in place" so
-          # surrounding alignment survives.
+          # Splice over "current in place" so surrounding alignment survives.
           at = index($0, current)
           $0 = substr($0, 1, at - 1) version substr($0, at + length(current))
           changed = 1
