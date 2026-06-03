@@ -1,8 +1,9 @@
 #!/bin/sh
-# Rewrites a single pinned version string in a file. YAML files are edited by yq
-# path expression; all other files match the version-bearing line by a leading
-# key token and swap the version-looking token on it. The consumer resolves the
-# desired version and passes it in; this script only performs the edit.
+# Rewrites a single pinned version string in a file while preserving every other
+# byte. Locating the version differs by file type, a yq path for YAML or a leading
+# key token otherwise, but both resolve to the same (line, value) pair and a single
+# splice rewrites that value in place. The consumer resolves the desired version
+# and passes it in; this script only performs the edit.
 set -euf
 
 die() {
@@ -19,81 +20,100 @@ command -v awk >/dev/null 2>&1 || die "awk not found"
 [ -f "${file}" ] || die "file not found: ${file}"
 [ -w "${file}" ] || die "file not writable: ${file}"
 
-changed=false
+# locate_yaml resolves the key (a yq path) against the file to a "LINE VALUE" pair
+# on stdout, returning non-zero if the path matches nothing.
+locate_yaml() (
+  # A missing simple path yields "null"; a path that traverses [] past a
+  # non-matching node yields empty. Neither is a realistic version, so treat both
+  # as no match rather than locate nothing and report success.
+  current="$(yq "${key}" "${file}")"
+  if [ -z "${current}" ] || [ "${current}" = "null" ]; then
+    return 2
+  fi
 
-case "${file}" in
-  *.yml | *.yaml)
-    command -v yq >/dev/null 2>&1 || die "yq not found"
+  printf '%s %s\n' "$(yq "(${key}) | line" "${file}")" "${current}"
+)
 
-    # yq targets the path exactly, so no version-pattern inference is needed. A
-    # missing simple path yields "null"; a path that traverses [] past a
-    # non-matching node yields empty. Neither is a realistic version, so treat
-    # both as no match and fail rather than write nothing and report success.
-    current="$(yq "${key}" "${file}")"
-    if [ -z "${current}" ] || [ "${current}" = "null" ]; then
-      die "yq path matched nothing: ${key}"
-    fi
+# locate_keyed resolves the key against the file to a "LINE VALUE" pair on stdout
+# by matching the first "KEY := value" assignment, returning non-zero if no such
+# assignment is present.
+locate_keyed() (
+  # The key is dynamic, so it is passed via -v; keys in scope are [A-Za-z0-9_-]
+  # and carry no regex metacharacters. The value is the assignment's third field,
+  # so the caller must only target lines whose value is a version.
+  awk -v key="${key}" '
+    BEGIN {
+      assignment_operator = "[[:space:]]*:?="
+      key_line_pattern = "^" key assignment_operator
+    }
+    $0 ~ key_line_pattern {
+      printf "%d %s\n", NR, $3
+      found = 1
+      exit
+    }
+    END { if (!found) exit 2 }
+  ' "${file}"
+)
 
-    if [ "${current}" != "${version}" ]; then
-      # Pass the value via the environment so it is treated as a string and
-      # never spliced into the yq expression.
-      VERSION="${version}" yq -i "${key} = strenv(VERSION)" "${file}"
-      changed=true
-    fi
-    ;;
-  *)
-    # Stage the rewrite in the target's directory so the mv is atomic, then
-    # commit it only on a clean replacement.
-    dir="$(dirname "${file}")"
-    tmp="$(mktemp "${dir}/.bump-version.XXXXXX")"
-    trap 'rm -f "${tmp}"' EXIT INT TERM HUP
+# splice rewrites OLD to NEW on the given line of the file in place, leaving every
+# other byte (blank lines, comments, alignment) untouched. The staged temp and
+# atomic mv land the change only after a clean rewrite, and a non-zero return
+# means OLD was not present on that line.
+splice() (
+  line="$1"
+  old="$2"
+  new="$3"
 
-    # The key is dynamic, so it is passed via -v; keys in scope are [A-Za-z0-9_-]
-    # and carry no regex metacharacters. The value is taken as the assignment's
-    # third field, so the caller must only target lines whose value is a version.
-    status=0
-    awk -v key="${key}" -v version="${version}" '
-      BEGIN {
-        assignment_operator = "[[:space:]]*:?="
-        key_line_pattern = "^" key assignment_operator
-      }
-      !found && $0 ~ key_line_pattern {
-        found = 1
-        current = $3
-        if (current != version) {
-          # Splice over "current in place" so surrounding alignment survives.
-          at = index($0, current)
-          $0 = substr($0, 1, at - 1) version substr($0, at + length(current))
-          changed = 1
-        }
-        print
-        next
-      }
-      { print }
-      END {
-        if (!found) exit 2
-        exit changed ? 0 : 3
-      }
-    ' "${file}" >"${tmp}" || status=$?
+  directory="$(dirname "${file}")"
+  temporary="$(mktemp "${directory}/.bump-version.XXXXXX")"
+  trap 'rm -f "${temporary}"' EXIT INT TERM HUP
 
-    case "${status}" in
-      0)
-        mv "${tmp}" "${file}"
-        changed=true
-        ;;
-      3) : ;; # Key found, already at version: nothing to do.
-      2) die "key not found: ${key}" ;;
-      *) die "awk failed with status ${status}" ;;
-    esac
-    ;;
-esac
+  # Splice over OLD in place so leading indentation, the key, and any trailing
+  # inline comment on the line all survive.
+  awk -v line="${line}" -v old="${old}" -v new="${new}" '
+    NR == line {
+      at = index($0, old)
+      if (at == 0) exit 2
+      $0 = substr($0, 1, at - 1) new substr($0, at + length(old))
+      print
+      next
+    }
+    { print }
+  ' "${file}" >"${temporary}" || return 2
 
-if [ "${changed}" = true ]; then
-  printf 'Updated %s to %s\n' "${file}" "${version}"
-else
-  printf '%s already at %s\n' "${file}" "${version}"
-fi
+  mv "${temporary}" "${file}"
+)
 
-[ -n "${GITHUB_OUTPUT:-}" ] && printf 'changed=%s\n' "${changed}" >>"${GITHUB_OUTPUT}"
+main() {
+  case "${file}" in
+    *.yml | *.yaml)
+      command -v yq >/dev/null 2>&1 || die "yq not found"
+      target="$(locate_yaml)" || die "key matched nothing: ${key}"
+      ;;
+    *)
+      target="$(locate_keyed)" || die "key not found: ${key}"
+      ;;
+  esac
 
-exit 0
+  line="${target%% *}"
+  current="${target#* }"
+
+  changed=false
+  if [ "${current}" != "${version}" ]; then
+    splice "${line}" "${current}" "${version}" ||
+      die "expected ${current} on line ${line} of ${file}"
+    changed=true
+  fi
+
+  if [ "${changed}" = true ]; then
+    printf 'Updated %s to %s\n' "${file}" "${version}"
+  else
+    printf '%s already at %s\n' "${file}" "${version}"
+  fi
+
+  if [ -n "${GITHUB_OUTPUT:-}" ]; then
+    printf 'changed=%s\n' "${changed}" >>"${GITHUB_OUTPUT}"
+  fi
+}
+
+main "$@"
