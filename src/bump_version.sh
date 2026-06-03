@@ -64,8 +64,8 @@ splice() (
   old="$2"
   new="$3"
 
-  directory="$(dirname "${file}")"
-  temporary="$(mktemp "${directory}/.bump-version.XXXXXX")"
+  temporary="$(mktemp "$(dirname "${file}")/.bump-version.XXXXXX")"
+  readonly temporary
   trap 'rm -f "${temporary}"' EXIT INT TERM HUP
 
   # Splice over OLD in place so leading indentation, the key, and any trailing
