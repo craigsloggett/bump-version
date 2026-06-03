@@ -88,6 +88,9 @@ main() {
   case "${file}" in
     *.yml | *.yaml)
       command -v yq >/dev/null 2>&1 || die "yq not found"
+      # The splice edits a single line, so a multi-node match is ambiguous.
+      [ "$(yq "[${key}] | length" "${file}")" -le 1 ] ||
+        die "key matched multiple lines: ${key}"
       target="$(locate_yaml)" || die "key matched nothing: ${key}"
       ;;
     *)
