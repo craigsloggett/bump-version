@@ -89,9 +89,9 @@ case "${file}" in
 esac
 
 if [ "${changed}" = true ]; then
-  printf '%s updated to use version: %s\n' "${file}" "${version}"
+  printf 'Updated %s to %s\n' "${file}" "${version}"
 else
-  printf '%s already at version: %s\n' "${file}" "${version}"
+  printf '%s already at %s\n' "${file}" "${version}"
 fi
 
 [ -n "${GITHUB_OUTPUT:-}" ] && printf 'changed=%s\n' "${changed}" >>"${GITHUB_OUTPUT}"
