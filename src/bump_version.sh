@@ -54,7 +54,7 @@ case "${file}" in
     status=0
     awk -v key="${key}" -v version="${version}" '
       BEGIN {
-        assignment_operator = "[[:space:]]*:?="        # Optional spaces, := or =
+        assignment_operator = "[[:space:]]*:?="
         key_line_pattern = "^" key assignment_operator
       }
       !found && $0 ~ key_line_pattern {
@@ -71,8 +71,8 @@ case "${file}" in
       }
       { print }
       END {
-        if (!found) exit 2    # Key not found.
-        exit changed ? 0 : 3  # 0 = changed, 3 = already current.
+        if (!found) exit 2
+        exit changed ? 0 : 3
       }
     ' "${file}" >"${tmp}" || status=$?
 
@@ -89,9 +89,9 @@ case "${file}" in
 esac
 
 if [ "${changed}" = true ]; then
-  printf 'updated %s to %s\n' "${file}" "${version}"
+  printf '%s updated to use version: %s\n' "${file}" "${version}"
 else
-  printf '%s already at %s\n' "${file}" "${version}"
+  printf '%s already at version: %s\n' "${file}" "${version}"
 fi
 
 [ -n "${GITHUB_OUTPUT:-}" ] && printf 'changed=%s\n' "${changed}" >>"${GITHUB_OUTPUT}"
