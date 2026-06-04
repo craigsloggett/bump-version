@@ -40,7 +40,9 @@ jobs:
           version: ${{ steps.latest.outputs.version }}
 ```
 
-For YAML files (`.yml`/`.yaml`), `key` is a yq path expression and the value is set exactly. For any other file, `key` names a space-separated assignment (`KEY := value` or `KEY = value`, as in a Makefile), and the assignment's value is replaced with `version` while surrounding alignment is preserved. The value is taken as-is with no version-format check, so only target assignments whose value you set explicitly, not computed ones like `GO_VERSION := $(shell ...)`. The action edits the file in place and fails if the key matches nothing.
+For YAML files (`.yml`/`.yaml`), `key` is a yq path expression and the value is set exactly. For any other file, `key` names a space-separated assignment (`KEY := value` or `KEY = value`, as in a Makefile), and the assignment's value is replaced with `version` while surrounding alignment is preserved.
+
+The action edits the file in place and fails if the key matches nothing.
 
 ## Inputs
 
