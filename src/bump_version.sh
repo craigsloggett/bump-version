@@ -11,14 +11,11 @@ die() {
   exit 1
 }
 
-file="${INPUT_FILE:?file input is required}"
-key="${INPUT_KEY:?key input is required}"
-version="${INPUT_VERSION:?version input is required}"
+: "${INPUT_FILE:?file input is required}"
+: "${INPUT_KEY:?key input is required}"
+: "${INPUT_VERSION:?version input is required}"
 
 command -v awk >/dev/null 2>&1 || die "awk not found"
-
-[ -f "${file}" ] || die "file not found: ${file}"
-[ -w "${file}" ] || die "file not writable: ${file}"
 
 # locate_yaml resolves the key (a yq path) against the file to a "LINE VALUE" pair
 # on stdout, returning non-zero if the path matches nothing.
@@ -85,6 +82,13 @@ splice() (
 )
 
 main() {
+  file="${INPUT_FILE}"
+  key="${INPUT_KEY}"
+  version="${INPUT_VERSION}"
+
+  [ -f "${file}" ] || die "file not found: ${file}"
+  [ -w "${file}" ] || die "file not writable: ${file}"
+
   case "${file}" in
     *.yml | *.yaml)
       command -v yq >/dev/null 2>&1 || die "yq not found"
