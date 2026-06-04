@@ -40,7 +40,7 @@ jobs:
           version: ${{ steps.latest.outputs.version }}
 ```
 
-For YAML files (`.yml`/`.yaml`), `key` is a yq path expression and the value is set exactly. For any other file, `key` names a space-separated assignment (`KEY := value` or `KEY = value`, as in a Makefile), and the assignment's value is replaced with `version` while surrounding alignment is preserved.
+For YAML files, `key` is a `yq` path expression and the value is set exactly. For any other file, `key` names a space-separated assignment and the assignment's value is replaced with `version` while surrounding alignment is preserved.
 
 The action edits the file in place and fails if the key matches nothing.
 
