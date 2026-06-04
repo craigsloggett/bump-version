@@ -28,7 +28,29 @@ locate_yaml() (
     return 2
   fi
 
-  printf '%s %s\n' "$(yq "(${key}) | line" "${file}")" "${current}"
+  # yq numbers lines from the first content node, ignoring any leading blank lines,
+  # comments, or document markers, so its reported line is short by that count. Add
+  # the number of skipped leading lines back to recover the true file line.
+  offset="$(
+    awk '
+      BEGIN {
+        blank_line      = "^[[:space:]]*$"
+        comment_line    = "^[[:space:]]*#"
+        document_marker = "^---"
+        directive       = "^%"
+      }
+      $0 ~ blank_line ||
+      $0 ~ comment_line ||
+      $0 ~ document_marker ||
+      $0 ~ directive {
+        next
+      }
+      { print NR - 1; exit }
+    ' "${file}"
+  )"
+  line="$(yq "(${key}) | line" "${file}")"
+
+  printf '%s %s\n' "$((line + offset))" "${current}"
 )
 
 # locate_keyed resolves the key against the file to a "LINE VALUE" pair on stdout
