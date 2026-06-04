@@ -1,6 +1,6 @@
 # bump-version
 
-Rewrites a single pinned version string in a file. YAML files are edited by yq path expression; all other files match the version-bearing line by a leading key token. The consumer resolves the desired version and passes it in.
+Rewrites a single pinned version string in a file. YAML files are edited by `yq` path expression; all other files match the version-bearing line by a leading key token. The consumer resolves the desired version and passes it in.
 
 ## Usage
 
@@ -49,7 +49,7 @@ The action edits the file in place and fails if the key matches nothing.
 | Input     | Required | Default | Description                                                                               |
 | --------- | -------- | ------- | ----------------------------------------------------------------------------------------- |
 | `file`    | Yes      |         | Path to the file to edit.                                                                 |
-| `key`     | Yes      |         | A yq path expression for YAML files, or the token that begins the version line otherwise. |
+| `key`     | Yes      |         | A `yq` path expression for YAML files, or the token that begins the version line otherwise. |
 | `version` | Yes      |         | The new version string to write.                                                          |
 
 ## Outputs
