@@ -12,6 +12,10 @@ inputs:
   version:
     description: The new version string to write.
     required: true
+  summary-file:
+    description: Filename of the job-scoped changed-files list written under `RUNNER_TEMP`.
+    required: false
+    default: changed-files.md
 
 outputs:
   changed:
@@ -32,3 +36,4 @@ runs:
         INPUT_FILE: ${{ inputs.file }}
         INPUT_KEY: ${{ inputs.key }}
         INPUT_VERSION: ${{ inputs.version }}
+        INPUT_SUMMARY_FILE: ${{ inputs.summary-file }}

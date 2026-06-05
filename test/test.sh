@@ -347,6 +347,27 @@ test_missing_input() {
   assert_output_contains 'version input is required' 'missing input: reports required input'
 }
 
+# test_custom_summary_file records the change under a caller-named summary file
+# instead of the default changed-files.md.
+test_custom_summary_file() {
+  : "case: custom summary file"
+  file="${work}/Makefile_summary"
+  cat >"${file}" <<'EOF'
+GOLANGCI_VERSION := 1.59.0
+EOF
+  : >"${gho}"
+  rm -f "${rtmp}/changed-files.md" "${rtmp}/custom.md"
+  status=0
+  INPUT_FILE="${file}" INPUT_KEY='GOLANGCI_VERSION' INPUT_VERSION='1.60.0' \
+    INPUT_SUMMARY_FILE='custom.md' GITHUB_OUTPUT="${gho}" RUNNER_TEMP="${rtmp}" \
+    "${script}" >"${output}" 2>&1 || status=$?
+  assert_status 0 'custom summary file: exits zero'
+  assert_file_contains "${rtmp}/custom.md" "${file}" \
+    'custom summary file: file recorded under custom name'
+  assert_file_absent "${rtmp}/changed-files.md" \
+    'custom summary file: default name not written'
+}
+
 main() {
   here="$(cd "$(dirname "$0")" && pwd)"
   script="${here}/../src/bump_version.sh"
@@ -381,6 +402,7 @@ main() {
   test_keyed_not_found
   test_file_not_found
   test_missing_input
+  test_custom_summary_file
 
   printf '\n%d passed, %d failed\n' "${passed}" "${failed}"
   [ "${failed}" -eq 0 ]

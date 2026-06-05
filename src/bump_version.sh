@@ -14,6 +14,7 @@ die() {
 : "${INPUT_FILE:?file input is required}"
 : "${INPUT_KEY:?key input is required}"
 : "${INPUT_VERSION:?version input is required}"
+: "${INPUT_SUMMARY_FILE:=changed-files.md}"
 
 command -v awk >/dev/null 2>&1 || die "awk not found"
 
@@ -107,6 +108,7 @@ main() {
   file="${INPUT_FILE}"
   key="${INPUT_KEY}"
   version="${INPUT_VERSION}"
+  summary_file="${INPUT_SUMMARY_FILE}"
 
   [ -f "${file}" ] || die "file not found: ${file}"
   [ -w "${file}" ] || die "file not writable: ${file}"
@@ -149,7 +151,7 @@ main() {
   # RUNNER_TEMP is shared across a job, so multiple bumps build one Markdown list.
   if [ "${changed}" = true ] && [ -n "${RUNNER_TEMP:-}" ]; then
     # shellcheck disable=SC2016 # Backticks are a literal Markdown code-span, not a subshell.
-    printf -- '- `%s`\n' "${file}" >>"${RUNNER_TEMP}/changed-files.md"
+    printf -- '- `%s`\n' "${file}" >>"${RUNNER_TEMP}/${summary_file}"
   fi
 }
 

@@ -46,11 +46,12 @@ The action edits the file in place and fails if the key matches nothing.
 
 ## Inputs
 
-| Input     | Required | Default | Description                                                                               |
-| --------- | -------- | ------- | ----------------------------------------------------------------------------------------- |
-| `file`    | Yes      |         | Path to the file to edit.                                                                 |
-| `key`     | Yes      |         | A `yq` path expression for YAML files, or the token that begins the version line otherwise. |
-| `version` | Yes      |         | The new version string to write.                                                          |
+| Input          | Required | Default            | Description                                                                                 |
+| -------------- | -------- | ------------------ | ------------------------------------------------------------------------------------------- |
+| `file`         | Yes      |                    | Path to the file to edit.                                                                   |
+| `key`          | Yes      |                    | A `yq` path expression for YAML files, or the token that begins the version line otherwise. |
+| `version`      | Yes      |                    | The new version string to write.                                                            |
+| `summary-file` | No       | `changed-files.md` | Filename of the job-scoped changed-files list written under `RUNNER_TEMP`.                  |
 
 ## Outputs
 
@@ -59,4 +60,4 @@ The action edits the file in place and fails if the key matches nothing.
 | `changed` | Whether the file was modified. `false` if it already held the version.  |
 | `file`    | The path to the file that was edited (passthrough of the `file` input). |
 
-On a change, the action also appends `` - `<file>` `` to `${RUNNER_TEMP}/changed-files.md`. `RUNNER_TEMP` is shared across a job, so several bumps accumulate one Markdown list that a later step can `cat` into `${GITHUB_STEP_SUMMARY}`.
+On a change, the action also appends `` - `<file>` `` to `${RUNNER_TEMP}/changed-files.md` (the filename is configurable via `summary-file`). `RUNNER_TEMP` is shared across a job, so several bumps accumulate one Markdown list that a later step can `cat` into `${GITHUB_STEP_SUMMARY}`.
