@@ -11,12 +11,15 @@ command -v yq >/dev/null 2>&1 || {
 
 # run invokes the script with the given file, key, and version, capturing combined
 # stdout and stderr to ${output} and the exit status to ${status}. GITHUB_OUTPUT is
-# pointed at a fresh ${gho} so the `changed` line can be asserted per case.
+# pointed at a fresh ${gho} so the `changed` and `file` lines can be asserted per
+# case, and RUNNER_TEMP at a cleared ${rtmp} so the changed-files list is per case.
 run() {
   : "run file=$1 key=$2 version=$3"
   : >"${gho}"
+  rm -f "${rtmp}/changed-files.md"
   status=0
-  INPUT_FILE="$1" INPUT_KEY="$2" INPUT_VERSION="$3" GITHUB_OUTPUT="${gho}" \
+  INPUT_FILE="$1" INPUT_KEY="$2" INPUT_VERSION="$3" \
+    GITHUB_OUTPUT="${gho}" RUNNER_TEMP="${rtmp}" \
     "${script}" >"${output}" 2>&1 || status=$?
 }
 
@@ -79,6 +82,17 @@ assert_file_contains() {
   fi
 }
 
+# assert_file_absent checks the named path does not exist.
+assert_file_absent() {
+  a_path="$1"
+  a_name="$2"
+  if [ ! -e "${a_path}" ]; then
+    pass "${a_name}"
+  else
+    fail "${a_name}" "file unexpectedly present: ${a_path}"
+  fi
+}
+
 # assert_file_unchanged checks the file is byte-identical to its reference copy.
 assert_file_unchanged() {
   a_path="$1"
@@ -118,6 +132,9 @@ EOF
   assert_output_contains 'Updated' 'yaml bump: reports updated'
   assert_file_contains "${file}" 'version: 2.0.0' 'yaml bump: new value written'
   assert_file_contains "${gho}" 'changed=true' 'yaml bump: changed=true'
+  assert_file_contains "${gho}" "file=${file}" 'yaml bump: file output set'
+  assert_file_contains "${rtmp}/changed-files.md" "${file}" \
+    'yaml bump: file recorded in changed-files list'
 }
 
 # test_yaml_idempotent leaves a file untouched when it already holds the version.
@@ -135,6 +152,9 @@ EOF
   assert_status 0 'yaml idempotent: exits zero'
   assert_output_contains 'already at' 'yaml idempotent: reports already at'
   assert_file_contains "${gho}" 'changed=false' 'yaml idempotent: changed=false'
+  assert_file_contains "${gho}" "file=${file}" 'yaml idempotent: file output set'
+  assert_file_absent "${rtmp}/changed-files.md" \
+    'yaml idempotent: nothing recorded when unchanged'
   assert_file_unchanged "${file}" "${reference}" 'yaml idempotent: file untouched'
 }
 
@@ -343,6 +363,8 @@ main() {
   failed=0
   output="${work}/output"
   gho="${work}/github_output"
+  rtmp="${work}/runner_temp"
+  mkdir -p "${rtmp}"
   status=0
 
   test_yaml_bump

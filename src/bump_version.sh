@@ -142,6 +142,14 @@ main() {
 
   if [ -n "${GITHUB_OUTPUT:-}" ]; then
     printf 'changed=%s\n' "${changed}" >>"${GITHUB_OUTPUT}"
+    printf 'file=%s\n' "${file}" >>"${GITHUB_OUTPUT}"
+  fi
+
+  # Convenience: accumulate the file in a job-scoped list a step summary can cat.
+  # RUNNER_TEMP is shared across a job, so multiple bumps build one Markdown list.
+  if [ "${changed}" = true ] && [ -n "${RUNNER_TEMP:-}" ]; then
+    # shellcheck disable=SC2016 # Backticks are a literal Markdown code-span, not a subshell.
+    printf -- '- `%s`\n' "${file}" >>"${RUNNER_TEMP}/changed-files.md"
   fi
 }
 
