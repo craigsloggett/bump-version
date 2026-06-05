@@ -12,13 +12,17 @@ inputs:
   version:
     description: The new version string to write.
     required: true
+  summary-file:
+    description: Filename of the job-scoped changed-files list written under `RUNNER_TEMP`.
+    required: false
+    default: changed-files.md
 
 outputs:
   changed:
     description: Whether the file was modified. `false` if it already held the version.
     value: ${{ steps.bump.outputs.changed }}
   file:
-    description: The path to the file that was edited (passthrough of the `file` input).
+    description: The path to the file that was edited.
     value: ${{ steps.bump.outputs.file }}
 
 runs:
@@ -32,3 +36,4 @@ runs:
         INPUT_FILE: ${{ inputs.file }}
         INPUT_KEY: ${{ inputs.key }}
         INPUT_VERSION: ${{ inputs.version }}
+        INPUT_SUMMARY_FILE: ${{ inputs.summary-file }}
