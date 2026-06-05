@@ -17,6 +17,9 @@ outputs:
   changed:
     description: Whether the file was modified. `false` if it already held the version.
     value: ${{ steps.bump.outputs.changed }}
+  file:
+    description: The path to the file that was edited (passthrough of the `file` input).
+    value: ${{ steps.bump.outputs.file }}
 
 runs:
   using: composite

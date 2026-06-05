@@ -57,3 +57,6 @@ The action edits the file in place and fails if the key matches nothing.
 | Output    | Description                                                             |
 | --------- | ----------------------------------------------------------------------- |
 | `changed` | Whether the file was modified. `false` if it already held the version.  |
+| `file`    | The path to the file that was edited (passthrough of the `file` input). |
+
+On a change, the action also appends `` - `<file>` `` to `${RUNNER_TEMP}/changed-files.md`. `RUNNER_TEMP` is shared across a job, so several bumps accumulate one Markdown list that a later step can `cat` into `${GITHUB_STEP_SUMMARY}`.
